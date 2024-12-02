@@ -1,0 +1,146 @@
+import pygame
+import random
+import sys
+
+# Inicializar Pygame
+pygame.init()
+
+# Dimensiones de la ventana
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+
+# Colores
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+BLACK = (0, 0, 0)
+BLUE = (0, 0, 255)
+
+# Configuración de pantalla
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Carrera: Tú contra la Máquina")
+
+# FPS y reloj
+clock = pygame.time.Clock()
+FPS = 60
+
+# Clase para el carro del jugador
+class PlayerCar(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.Surface((50, 100))
+        self.image.fill(RED)
+        self.rect = self.image.get_rect()
+        self.rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT - 120)
+        self.distance = 0  # Distancia recorrida por el jugador
+    
+    def update(self, keys):
+        if keys[pygame.K_LEFT] and self.rect.left > 0:
+            self.rect.x -= 5
+        if keys[pygame.K_RIGHT] and self.rect.right < SCREEN_WIDTH:
+            self.rect.x += 5
+        self.distance += 1  # Incrementa la distancia conforme el jugador avanza
+
+# Clase para el carro de la máquina
+class MachineCar(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.Surface((50, 100))
+        self.image.fill(BLUE)
+        self.rect = self.image.get_rect()
+        self.rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT - 300)
+        self.distance = 0  # Distancia recorrida por la máquina
+    
+    def update(self, obstacles):
+        # Movimiento automático: evita obstáculos y acelera
+        self.rect.y += 1  # Simula movimiento hacia adelante
+        self.distance += 2  # La máquina avanza más rápido
+
+        # Estrategia: Cambiar de carril si hay obstáculos adelante
+        for obstacle in obstacles:
+            if self.rect.colliderect(obstacle.rect):
+                if self.rect.left > 0:
+                    self.rect.x -= 50  # Mueve a la izquierda
+                elif self.rect.right < SCREEN_WIDTH:
+                    self.rect.x += 50  # Mueve a la derecha
+                break
+
+# Clase para los obstáculos
+class Obstacle(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.Surface((50, 100))
+        self.image.fill(BLACK)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+    
+    def update(self):
+        self.rect.y += 5
+        if self.rect.top > SCREEN_HEIGHT:
+            self.rect.y = random.randint(-200, -50)
+            self.rect.x = random.randint(0, SCREEN_WIDTH - self.rect.width)
+
+# Crear grupos de sprites
+all_sprites = pygame.sprite.Group()
+obstacles = pygame.sprite.Group()
+
+# Crear el carro del jugador
+player_car = PlayerCar()
+all_sprites.add(player_car)
+
+# Crear el carro de la máquina
+machine_car = MachineCar()
+all_sprites.add(machine_car)
+
+# Crear obstáculos
+for i in range(5):
+    x = random.randint(0, SCREEN_WIDTH - 50)
+    y = random.randint(-200, -50)
+    obstacle = Obstacle(x, y)
+    all_sprites.add(obstacle)
+    obstacles.add(obstacle)
+
+# Bucle principal del juego
+running = True
+while running:
+    # Manejo de eventos
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    # Obtener las teclas presionadas
+    keys = pygame.key.get_pressed()
+
+    # Actualizar los sprites
+    player_car.update(keys)
+    machine_car.update(obstacles)
+    obstacles.update()
+
+    # Dibujar en pantalla
+    screen.fill(WHITE)
+    all_sprites.draw(screen)
+
+    # Mostrar puntuación
+    font = pygame.font.Font(None, 36)
+    player_score = font.render(f"Tú: {player_car.distance}", True, RED)
+    machine_score = font.render(f"Máquina: {machine_car.distance}", True, BLUE)
+    screen.blit(player_score, (10, 10))
+    screen.blit(machine_score, (10, 50))
+
+    # Comprobar ganador
+    if player_car.distance >= 5000:  # Gana el jugador si llega a 5000 puntos
+        print("¡Ganaste!")
+        running = False
+    elif machine_car.distance >= 5000:  # Gana la máquina si llega primero
+        print("La máquina ganó.")
+        running = False
+
+    # Actualizar pantalla
+    pygame.display.flip()
+
+    # Controlar FPS
+    clock.tick(FPS)
+
+# Salir del juego
+pygame.quit()
+sys.exit()
